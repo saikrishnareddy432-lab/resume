@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Resume Customizer — Online</title>
+
+<!-- ONLINE CDNs (no API keys needed) -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.umd.min.js" defer></script>
+
+<style>
+  :root{
+    --bg:#0c0c0c; --panel:#121212; --muted:#bdbdbd; --text:#f6f3ee;
+    --orange:#ff8a3d; --orange-2:#ff6f00; --good:#26d07c; --bad:#ff6b6b; --line:#242424;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,Segoe UI,Roboto,Arial}
+  h1{margin:18px 12px;text-align:center;color:var(--orange);font-weight:900;letter-spacing:.2px}
+  .wrap{max-width:1200px;margin:0 auto;padding:12px}
+  .grid{display:grid;grid-template-columns:1fr 420px;gap:14px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 12px 30px rgba(0,0,0,.45)}
+  label{display:block;font-size:12px;color:var(--muted);font-weight:700;margin:6px 0}
+  input[type=file],input[type=text],select,textarea,button{
+    width:100%;border:1px solid var(--line);border-radius:10px;background:#0e0e0e;color:var(--text);
+    padding:10px;font-size:14px;outline:none
+  }
+  textarea{min-height:120px;resize:vertical}
+  button{cursor:pointer;font-weight:900;background:linear-gradient(90deg,var(--orange),var(--orange-2));color:#120a00;border:none}
+  button.secondary{background:#171717;color:var(--text)}
+  button:disabled{opacity:.6;cursor:not-allowed}
+  .row{display:flex;gap:10px}
+  .row > *{flex:1}
+  .kpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+  .stat{background:#0a0a0a;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .circle{width:110px;height:110px;border-radius:999px;margin:auto;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:20px}
+  .low{background:linear-gradient(180deg,#3a1a1a,#5a2a2a);color:#ffe2e2}
+  .mid{background:linear-gradient(180deg,#4a3a13,#72601a);color:#fff4cc}
+  .high{background:linear-gradient(180deg,#114017,#155a14);color:#eaffea}
+  #preview{white-space:pre-wrap;background:#070707;border:1px solid var(--line);border-radius:10px;padding:12px;min-height:160px;font-family:Consolas,Menlo,monospace}
+  .kw{display:inline-block;margin:3px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);font-size:12px}
+  .kw.missing{background:#2a0f0f;color:var(--bad)}
+  .kw.present{background:#0f2519;color:var(--good)}
+  .changes{max-height:260px;overflow:auto;background:#0b0b0b;border:1px solid var(--line);border-radius:10px;padding:8px}
+  .change{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px;display:flex;gap:10px;justify-content:space-between}
+  .badge{padding:6px 8px;border-radius:8px;font-size:12px;border:1px solid var(--line)}
+  .green{background:rgba(38,208,124,.12);color:var(--good)}
+  .muted{font-size:12px;color:var(--muted)}
+  .footer{font-size:12px;color:var(--muted);margin-top:8px}
+  .head{display:flex;gap:10px;align-items:center}
+  .head > div{flex:1;text-align:center}
+  .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#171717;border:1px solid var(--line);font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+  <h1>🧡 Resume Customizer (Online)</h1>
+  <div class="wrap">
+    <div class="grid">
+      <!-- LEFT -->
+      <div class="panel">
+        <label>Upload resume (.docx)</label>
+        <input id="resumeFile" type="file" accept=".docx" />
+
+        <label style="margin-top:8px">Paste Job Description</label>
+        <textarea id="jobDesc" placeholder="Paste the JD here…"></textarea>
+
+        <div class="row">
+          <div>
+            <label>Your Full Name</label>
+            <input id="userName" type="text" placeholder="e.g., Sai Reddy" />
+          </div>
+          <div>
+            <label>Job Role / Title</label>
+            <input id="jobRole" type="text" placeholder="e.g., Network Engineer" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label>Intensity</label>
+            <select id="intensity">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+          <div>
+            <label>Mode</label>
+            <select id="modeSelect">
+              <option value="auto">Auto</option>
+              <option value="review" selected>Auto + Review</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button id="analyzeBtn" disabled>✨ Customize & Analyze</button>
+          <button id="resetBtn" class="secondary">Reset</button>
+        </div>
+
+        <div class="footer">
+          Tip: The downloaded .docx keeps basic inline formatting. Add numbers where you see <code>[quantify]</code>.
+        </div>
+      </div>
+
+      <!-- RIGHT -->
+      <div class="panel">
+        <div class="head">
+          <div>
+            <div class="muted">Before</div>
+            <div id="beforeCircle" class="circle low">—</div>
+          </div>
+          <div>
+            <div class="muted">After</div>
+            <div id="afterCircle" class="circle low">—</div>
+          </div>
+        </div>
+
+        <div class="kpi">
+          <div class="stat" id="kwStat">Keywords matched: —</div>
+          <div class="stat" id="secStat">Sections OK: —</div>
+          <div class="stat" id="formatStat">Formatting safe: —</div>
+          <div class="stat" id="scoreDelta">Δ +—%</div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="pill">Missing keywords</div>
+          <div id="missingList" style="margin-top:6px"></div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="pill">Change log</div>
+          <div id="changes" class="changes">No changes yet</div>
+          <div class="footer">In “Auto + Review”, you can Accept/Reject suggested edits before download.</div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <button id="downloadBtn" class="secondary" disabled>📥 Download .docx</button>
+          <button id="copyBtn" class="secondary">Copy Preview</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:14px">
+      <div class="pill">Preview (text + inline hints)</div>
+      <div id="preview" style="margin-top:8px"></div>
+      <div class="footer">This preview is for reviewing text. The actual .docx keeps your simple formatting.</div>
+    </div>
+  </div>
+
+<script>
+  // Wait until CDNs are ready
+  window.addEventListener('load', () => {
+    if (!window.mammoth || !window.docx || !window.docx.Document) {
+      alert('Libraries failed to load. Please ensure internet is available.');
+      return;
+    }
+    main();
+  });
+
+  function main(){
+    const { Document, Packer, Paragraph, TextRun } = window.docx;
+
+    // --- State
+    let docParagraphs = [];          // Array< Array<{text,bold,italic}> >
+    let snapshot = [];               // original for reset
+    let changeLog = [];              // list of applied suggestions
+
+    // --- Helpers
+    const stopWords = new Set(["with","that","from","this","your","have","will","which","years","year","using","use","work","works","ability","responsible","and","the","for","to","of","in","on","by","as","an","a"]);
+    const verbMap = {"helped with":"spearheaded","assisted":"led","worked on":"implemented","responsible for":"owned","participated":"contributed to","managed":"directed","improved":"optimized","did":"performed","fixed":"resolved","used":"leveraged","supported":"facilitated","created":"designed","handled":"oversaw","maintained":"preserved","coordinated":"orchestrated","implemented":"deployed"};
+
+    const $ = sel => document.getElementById(sel);
+    const textOf = runs => runs.map(r=>r.text).join(" ");
+    const flatText = () => docParagraphs.map(textOf).join(" ").toLowerCase();
+    const escRE = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const sanitizeName = s => (s||"").trim().replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_\-]/g,'');
+    const setCircle = (el, pct) => {
+      el.textContent = pct + '%';
+      el.className = 'circle ' + (pct < 55 ? 'low' : pct < 80 ? 'mid' : 'high');
+    };
+
+    function renderPreview(){
+      const prev = $('preview');
+      prev.textContent = '';
+      docParagraphs.forEach(runs => {
+        let line = runs.map(r=>{
+          let t = r.text;
+          if(r.bold) t = '**' + t + '**';
+          if(r.italic) t = '_' + t + '_';
+          return t;
+        }).join('');
+        prev.textContent += line + '\n\n';
+      });
+    }
+
+    function detectCompanyName(text){
+      const pats = [
+        /\bat\s+([A-Z][\w&.\- ]{2,})/i,
+        /\bcompany[:\-]?\s*([A-Z][\w&.\- ]{2,})/i,
+        /\bjoin\s+(?:the\s+)?([A-Z][\w&.\- ]{2,})/i,
+        /\bwork at\s+([A-Z][\w&.\- ]{2,})/i,
+        /\bwith\s+([A-Z][\w&.\- ]{2,})/i
+      ];
+      for(const re of pats){ const m = re.exec(text); if(m && m[1]) return m[1].trim().replace(/[.,]$/,''); }
+      return '';
+    }
+
+    function extractKeywords(jd){
+      const tokens = (jd||'').toLowerCase().match(/\b[a-z]{4,}\b/g) || [];
+      const filtered = tokens.filter(t => !stopWords.has(t));
+      const freq = {};
+      filtered.forEach(w => freq[w] = (freq[w]||0) + 1);
+      return Object.keys(freq).sort((a,b)=>freq[b]-freq[a]);
+    }
+
+    function computeScores(keywords){
+      const flat = flatText();
+      const present = keywords.filter(k => flat.includes(k));
+      const kwScore = (keywords.length ? present.length/keywords.length : 1);
+      const secScore = (flat.match(/\b(skills|experience|education|summary|projects|certifications)\b/g) || []).length >= 3 ? 1 : 0.65;
+      const fmtOk = !flat.match(/\[image:|\[table:|\{\{|\}\}/);
+      const fmtScore = fmtOk ? 1 : 0.75;
+      const raw = kwScore*0.6 + secScore*0.25 + fmtScore*0.15;
+      return { raw, present, fmtOk, kwScore, secScore, fmtScore };
+    }
+
+    function applyEdits(usedKeywords, intensity){
+      const verbRate = intensity==='low' ? 0.25 : intensity==='medium' ? 0.5 : 0.9;
+      const keyRate  = intensity==='low' ? 0.25 : intensity==='medium' ? 0.5 : 0.9;
+
+      const edited = docParagraphs.map(runs => runs.map(run => {
+        let t = run.text, before;
+        // verbs
+        Object.keys(verbMap).forEach(weak=>{
+          const re = new RegExp("\\b"+escRE(weak)+"\\b","gi");
+          if(re.test(t) && Math.random()<verbRate){
+            before = t;
+            t = t.replace(re, verbMap[weak]);
+            changeLog.push({type:'verb_replace', before: before.trim(), after: t.trim()});
+          }
+        });
+        // add quantify hint
+        const lower = t.toLowerCase();
+        const hasAction = Object.values(verbMap).some(v => lower.includes(v)) || /\b(led|optimized|reduced|increased|managed|deployed|implemented)\b/i.test(lower);
+        if(hasAction && !/\b\d+%|\d+\s+(years?|yrs)|\$\d+/i.test(t) && !t.includes('[quantify]') && Math.random()<0.6){
+          t += ' [quantify]';
+          changeLog.push({type:'add_quantify', paragraph: t.trim()});
+        }
+        // emphasize keywords
+        usedKeywords.forEach(k=>{
+          const reK = new RegExp("\\b"+escRE(k)+"\\b","gi");
+          if(reK.test(t) && Math.random()<keyRate){
+            t = t.replace(reK, m => m.toUpperCase());
+            changeLog.push({type:'emphasize_keyword', keyword:k, context:t.trim()});
+          }
+        });
+
+        return { text:t, bold:run.bold, italic:run.italic };
+      }));
+
+      // If still missing, add a Skills line
+      const flat = edited.map(textOf).join(' ').toLowerCase();
+      const missing = usedKeywords.filter(k => !flat.includes(k));
+      if(missing.length){
+        const add = 'Skills: ' + missing.slice(0,8).join(', ');
+        edited.splice( Math.min(edited.length, 3), 0, [{text:add,bold:false,italic:false}] );
+        changeLog.push({type:'added_paragraph', text:add});
+      }
+
+      docParagraphs = edited;
+    }
+
+    function renderChangeLog(reviewMode){
+      const box = $('changes');
+      box.innerHTML = '';
+      if(!changeLog.length){ box.textContent = 'No changes yet'; return; }
+      changeLog.forEach((c, idx)=>{
+        const row = document.createElement('div');
+        row.className = 'change';
+        const left = document.createElement('div');
+        if(c.type==='verb_replace'){
+          left.innerHTML = `<div style="font-weight:700;color:var(--orange)">Verb updated</div>
+            <div class="muted"><s>${c.before || ''}</s> → <b>${c.after || ''}</b></div>`;
+        } else if(c.type==='add_quantify'){
+          left.innerHTML = `<div style="font-weight:700;color:var(--orange)">Added [quantify]</div>
+            <div class="muted">${c.paragraph || ''}</div>`;
+        } else if(c.type==='emphasize_keyword'){
+          left.innerHTML = `<div style="font-weight:700;color:var(--orange)">Emphasized: ${c.keyword}</div>
+            <div class="muted">${c.context || ''}</div>`;
+        } else if(c.type==='added_paragraph'){
+          left.innerHTML = `<div style="font-weight:700;color:var(--orange)">Inserted paragraph</div>
+            <div class="muted">${c.text || ''}</div>`;
+        }
+        row.appendChild(left);
+
+        const right = document.createElement('div');
+        if(reviewMode){
+          const a = document.createElement('button'); a.textContent='Accept';
+          const r = document.createElement('button'); r.textContent='Reject'; r.className='secondary';
+          a.onclick = ()=>{ c._approved = true; a.disabled = true; r.disabled = false; row.style.opacity=.7; };
+          r.onclick = ()=>{ c._approved = false; r.disabled = true; a.disabled = false; row.style.opacity=.7; };
+          right.appendChild(a); right.appendChild(document.createElement('div')).remove;
+          right.appendChild(r);
+        }else{
+          const b = document.createElement('div'); b.className='badge green'; b.textContent='Auto';
+          c._approved = true; right.appendChild(b);
+        }
+        row.appendChild(right);
+        box.appendChild(row);
+      });
+    }
+
+    function updateStats(beforePct, afterPct, usedKeywords, score){
+      setCircle($('beforeCircle'), beforePct);
+      setCircle($('afterCircle'), afterPct);
+      $('kwStat').textContent = `Keywords matched: ${score.present.length}/${Math.max(1, usedKeywords.length)}`;
+      $('secStat').textContent = `Sections OK: ${Math.round(score.secScore*100)}%`;
+      $('formatStat').textContent = `Formatting safe: ${score.fmtOk ? 'Yes' : 'Check'}`;
+      $('scoreDelta').textContent = `Δ +${Math.max(0, afterPct - beforePct)}%`;
+    }
+
+    function showMissing(allUsed){
+      const flat = flatText();
+      const miss = allUsed.filter(k => !flat.includes(k));
+      const div = $('missingList'); div.innerHTML='';
+      miss.slice(0,48).forEach(k=>{
+        const el = document.createElement('span'); el.className='kw missing'; el.textContent = k; div.appendChild(el);
+      });
+    }
+
+    // --- Events
+    $('resumeFile').addEventListener('change', e=>{
+      const f = e.target.files[0];
+      if(!f) return;
+      const reader = new FileReader();
+      reader.onload = async ev => {
+        try{
+          const res = await mammoth.convertToHtml({ arrayBuffer: ev.target.result });
+          const tmp = document.createElement('div');
+          tmp.innerHTML = res.value || "";
+          const paras = tmp.querySelectorAll('p,li,h1,h2,h3');
+          docParagraphs = [];
+          paras.forEach(p=>{
+            const runs=[];
+            p.childNodes.forEach(node=>{
+              if(node.nodeType===3) runs.push({text:node.textContent||"",bold:false,italic:false});
+              else if(node.nodeType===1){
+                const tag=node.tagName.toLowerCase();
+                runs.push({text:node.textContent||"",bold:(tag==='strong'||tag==='b'),italic:(tag==='em'||tag==='i')});
+              }
+            });
+            if(runs.length===0 && p.textContent) runs.push({text:p.textContent,bold:false,italic:false});
+            if(runs.length) docParagraphs.push(runs);
+          });
+          snapshot = JSON.parse(JSON.stringify(docParagraphs));
+          if(!docParagraphs.length) { alert("Couldn't parse resume. Try a simpler .docx."); return; }
+          renderPreview();
+          $('analyzeBtn').disabled = false;
+          $('downloadBtn').disabled = true;
+          $('changes').textContent = 'No changes yet';
+          $('missingList').innerHTML = '';
+          setCircle($('beforeCircle'), 0); setCircle($('afterCircle'), 0);
+          $('kwStat').textContent='Keywords matched: —';
+          $('secStat').textContent='Sections OK: —';
+          $('formatStat').textContent='Formatting safe: —';
+          $('scoreDelta').textContent='Δ +—%';
+          alert('Resume loaded.');
+        }catch(err){
+          console.error(err); alert('Error reading .docx: '+err);
+        }
+      };
+      reader.readAsArrayBuffer(f);
+    });
+
+    $('analyzeBtn').addEventListener('click', ()=>{
+      if(!docParagraphs.length){ alert('Upload a resume first.'); return; }
+      const jd = $('jobDesc').value || '';
+      const intensity = $('intensity').value;
+      const mode = $('modeSelect').value; // auto or review
+
+      const allKeywords = extractKeywords(jd);
+      const beforeSample = allKeywords.slice(0, Math.min(allKeywords.length, Math.max(6, Math.floor(allKeywords.length*0.35))));
+      const beforeScore = computeScores(beforeSample);
+      const beforePct = Math.round(beforeScore.raw*100);
+
+      let kwCount = intensity==='low' ? Math.max(3, Math.floor(allKeywords.length*0.25))
+                 : intensity==='medium' ? Math.max(6, Math.floor(allKeywords.length*0.5))
+                 : Math.max(8, allKeywords.length);
+      kwCount = Math.min(allKeywords.length, kwCount);
+      const used = allKeywords.slice(0, kwCount);
+
+      changeLog = [];
+      applyEdits(used, intensity);
+      renderPreview();
+      renderChangeLog(mode==='review');
+
+      const afterScore = computeScores(used);
+      const afterPct = Math.round(afterScore.raw*100);
+      updateStats(beforePct, afterPct, used, afterScore);
+      showMissing(used);
+
+      $('downloadBtn').disabled = false;
+    });
+
+    $('resetBtn').addEventListener('click', ()=>{
+      if(!snapshot.length){ location.reload(); return; }
+      if(!confirm('Reset everything back to the uploaded resume?')) return;
+      docParagraphs = JSON.parse(JSON.stringify(snapshot));
+      changeLog = [];
+      renderPreview();
+      $('changes').textContent='No changes yet';
+      $('missingList').innerHTML='';
+      $('downloadBtn').disabled = true;
+      setCircle($('beforeCircle'), 0); setCircle($('afterCircle'), 0);
+      $('kwStat').textContent='Keywords matched: —';
+      $('secStat').textContent='Sections OK: —';
+      $('formatStat').textContent='Formatting safe: —';
+      $('scoreDelta').textContent='Δ +—%';
+    });
+
+    $('copyBtn').addEventListener('click', ()=>{
+      navigator.clipboard.writeText($('preview').textContent).then(()=>alert('Preview copied.'));
+    });
+
+    $('downloadBtn').addEventListener('click', async ()=>{
+      // Respect Accept/Reject in review mode: revert rejected items
+      const rejected = changeLog.filter(c=>c._approved===false);
+      if(rejected.length){
+        // revert simple types
+        docParagraphs = docParagraphs.map(runs => runs.map(r=>{
+          let t=r.text;
+          rejected.forEach(c=>{
+            if(c.type==='verb_replace' && c.after && c.before){
+              const re = new RegExp(escRE(c.after), 'g');
+              t = t.replace(re, c.before);
+            }
+            if(c.type==='emphasize_keyword' && c.keyword){
+              const re = new RegExp("\\b"+escRE(c.keyword)+"\\b",'gi');
+              t = t.replace(re, m => m.toLowerCase());
+            }
+            if(c.type==='add_quantify'){
+              t = t.replace(/\s*\[quantify\]/g,'');
+            }
+          });
+          return {text:t, bold:r.bold, italic:r.italic};
+        }));
+        // remove inserted paragraphs that were rejected
+        const rejAdds = new Set(rejected.filter(x=>x.type==='added_paragraph').map(x=>x.text.trim()));
+        if(rejAdds.size){
+          docParagraphs = docParagraphs.filter(runs => !rejAdds.has(textOf(runs).trim()));
+        }
+      }
+
+      // build .docx
+      const children = [];
+      docParagraphs.forEach(runs=>{
+        const truns = runs.map(r => new TextRun({ text: r.text, bold: r.bold, italics: r.italic }));
+        children.push(new Paragraph({ children: truns }));
+      });
+      const doc = new Document({ sections:[{ children }] });
+      const blob = await Packer.toBlob(doc);
+
+      // smart filename
+      const name = sanitizeName($('userName').value || 'Resume');
+      const role = sanitizeName($('jobRole').value || '');
+      const company = sanitizeName(detectCompanyName($('jobDesc').value) || '');
+      let fname = name;
+      if(role) fname += '_' + role;
+      if(company) fname += '_' + company;
+      fname += '.docx';
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fname;
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    });
+  }
+</script>
+</body>
+</html>
